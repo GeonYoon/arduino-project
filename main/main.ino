@@ -6,7 +6,7 @@
 #define PIN 25
 #define PIN13 13    // Grap Signal from the charger
 #define PIN15 15    // LED wire LED Data 
-#define NUM_LEDS 75 // Number of LEDs on the neo pixel ring
+#define NUM_LEDS 71 // Number of LEDs on the neo pixel ring
 #define ringshow_noglitch() {delay(1);ring.show();delay(1);ring.show();}
 Adafruit_NeoPixel ring = Adafruit_NeoPixel(75, PIN15, NEO_GRB + NEO_KHZ800);
 
@@ -28,7 +28,7 @@ void on_set() {
     int led_value = server.arg("value").toInt();
 
     // convert the battery to the proper number of LED
-    float temp = 75 * (led_value/100.0);
+    float temp = NUM_LEDS * (led_value/100.0);
     led = int(temp);
 
     // send response back to the pohone
@@ -40,11 +40,11 @@ void on_set() {
 void turn_on(int num_leds){
   int j = 1;
   for(int i=0;i<num_leds;i++) {
-    if(i< 12){
-      ring.setPixelColor(i,r,g+(i*21),b); 
+    if(i< 35){
+      ring.setPixelColor(i,r,g+(i*7),b); 
     }
-    if(i >= 12){
-      ring.setPixelColor(i,r-(j*40),255,b); 
+    if(i >= 35){
+      ring.setPixelColor(i,r-(j*7),255,b); 
       j++;    
     }
   }
@@ -52,11 +52,10 @@ void turn_on(int num_leds){
 
 // Turn OFF LED
 void trun_off(int num_leds){
-  for(int i= num_leds+1;i<75;i++) {
+  for(int i= num_leds+1;i<NUM_LEDS;i++) {
      ring.setPixelColor(i,0,0,0); 
   }
 }
-
 void setup(void){
   // charger info setup
   pinMode(PIN13, INPUT);
