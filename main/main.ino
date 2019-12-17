@@ -15,11 +15,15 @@ const char* pass = "cics290m";
 WebServer server(80);  // define server object, at port 80
 
 // initial variables
-byte prev0 = 1;
+  
+byte prev0 = 1; // flaig 
+byte siri_flag = 1; 
+byte battery_flag = 1;
 int r= 255;
 int g = 0;
 int b = 0;
 int led = 0;
+int off = 0;
 
 // functions go here 
 void on_set() {
@@ -29,8 +33,28 @@ void on_set() {
 
     // convert the battery to the proper number of LED
     float temp = NUM_LEDS * (led_value/100.0);
-    led = int(temp);
+    int temp_led = int(temp);
 
+    // change flag if the new battery info is different from the cached one
+    if(temp_led != led){
+      battery_flag = 0;
+      led = temp_led;
+    } 
+    
+    // send response back to the pohone
+    server.send(200, "text/html", "{\"result\":1}");
+  } else { server.send(200, "text/html", "{\"result\":0}"); }
+}
+
+void light() {
+  if(server.hasArg("value")) {
+    // get the value from the params 
+    int val = server.arg("value").toInt();
+
+    // change the flag to 0
+    siri_flag = 0;
+    off = val;
+    
     // send response back to the pohone
     server.send(200, "text/html", "{\"result\":1}");
   } else { server.send(200, "text/html", "{\"result\":0}"); }
@@ -48,6 +72,7 @@ void turn_on(int num_leds){
       j++;    
     }
   }
+
 }
 
 // Turn OFF LED
@@ -75,6 +100,7 @@ void setup(void){
   WiFi.mode(WIFI_AP); // start ESP in AP mode
   WiFi.softAP(ssid, pass); // configure ssid and (optionally) password 
   server.on("/set", on_set); // set callback function
+  server.on("/light", light); // set callback function
   server.begin();  // starts server
 }
 
@@ -83,7 +109,9 @@ void loop(void){
   byte curr0 = digitalRead(PIN13); // get the signal from the charger. 1 == ON, 0 == OFF
   
   server.handleClient();  // handle client requests, must call frequently
-   if(curr0 != prev0){ 
+
+  // Update when the charging starts or phone leavs
+  if(curr0 != prev0){    // when we turn off
     if(curr0 == 1){
       // when the phone starts to charge
       turn_on(num_leds);
@@ -96,6 +124,28 @@ void loop(void){
       ringshow_noglitch();
       num_leds = 0;    
     }
+  }
+  prev0 = curr0;
+
+  // update when we get siri order either turn_on or turn_off
+  if(siri_flag == 0){
+    if(off == 0){
+      turn_on(num_leds);
+      trun_off(num_leds);
+      ringshow_noglitch(); 
+    }
+    else{
+      trun_off(-1);
+      ringshow_noglitch();
+    }
+    siri_flag = 1;
+  }
+  
+  // Update when the battery changes 
+  if(battery_flag == 0){
+      turn_on(num_leds);
+      trun_off(num_leds);
+      ringshow_noglitch(); 
+      battery_flag = 1;
    }
-   prev0 = curr0;
 }
