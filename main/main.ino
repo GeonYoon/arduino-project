@@ -14,27 +14,28 @@ const char* ssid = "gun_final"; // !!! CHANGE THIS to your name or sth. unique
 const char* pass = "cics290m";
 WebServer server(80);  // define server object, at port 80
 
-// initial variables
-  
-byte prev0 = 1; // flaig 
+// flags 
+byte prev0 = 1; // detect to start charging
 byte siri_flag = 1; 
 byte battery_flag = 1;
+
+// global variables 
 int r= 255;
 int g = 0;
 int b = 0;
 int led = 0;
 int off = 0;
 
-// functions go here 
-void on_set() {
+// helper functions 
+void update_led() {
   if(server.hasArg("value")) {
-    // get the value from the params 
+    // get the value from the param 
     int led_value = server.arg("value").toInt();
 
     // convert the battery to the proper number of LED
     float temp = NUM_LEDS * (led_value/100.0);
     int temp_led = int(temp);
-
+    Serial.print(temp_led);
     // change flag if the new battery info is different from the cached one
     if(temp_led != led){
       battery_flag = 0;
@@ -46,9 +47,13 @@ void on_set() {
   } else { server.send(200, "text/html", "{\"result\":0}"); }
 }
 
-void light() {
+
+// This function is trigger by siri call. 
+// ex. "Hey Siri Trun off the LED" or "Hey Siri Trun on the LED"
+void update_led_status() {
   if(server.hasArg("value")) {
-    // get the value from the params 
+    
+    // get the value from the param 
     int val = server.arg("value").toInt();
 
     // change the flag to 0
@@ -96,11 +101,12 @@ void setup(void){
 
   // For debug
   Serial.begin(9600);
-  
+
+  // Open up the wifi and recieve the API calls 
   WiFi.mode(WIFI_AP); // start ESP in AP mode
-  WiFi.softAP(ssid, pass); // configure ssid and (optionally) password 
-  server.on("/set", on_set); // set callback function
-  server.on("/light", light); // set callback function
+  WiFi.softAP(ssid, pass); 
+  server.on("/led", update_led); 
+  server.on("/status", update_led_status);
   server.begin();  // starts server
 }
 
@@ -108,6 +114,7 @@ void loop(void){
   int num_leds = led;              // based on the phone's battery
   byte curr0 = digitalRead(PIN13); // get the signal from the charger. 1 == ON, 0 == OFF
   
+  // Server is running
   server.handleClient();  // handle client requests, must call frequently
 
   // Update when the charging starts or phone leavs
@@ -129,7 +136,7 @@ void loop(void){
 
   // update when we get siri order either turn_on or turn_off
   if(siri_flag == 0){
-    if(off == 0){
+    if(off == 0 && curr0 == 1){
       turn_on(num_leds);
       trun_off(num_leds);
       ringshow_noglitch(); 
@@ -142,7 +149,7 @@ void loop(void){
   }
   
   // Update when the battery changes 
-  if(battery_flag == 0){
+  if(battery_flag == 0 && curr0 == 1){
       turn_on(num_leds);
       trun_off(num_leds);
       ringshow_noglitch(); 
