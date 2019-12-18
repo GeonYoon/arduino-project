@@ -19,6 +19,7 @@ byte prev0 = 1; // detect to start charging
 byte siri_flag = 1; 
 byte battery_flag = 1;
 byte demo_flag = 1;
+byte timer_flag = 1;
 
 // global variables 
 int r= 255;
@@ -26,6 +27,7 @@ int g = 0;
 int b = 0;
 int led = 0;
 int off = 0;
+int time_val = 0;
 
 // helper functions 
 void update_led() {
@@ -36,7 +38,7 @@ void update_led() {
     // convert the battery to the proper number of LED
     float temp = NUM_LEDS * (led_value/100.0);
     int temp_led = int(temp);
-    Serial.print(temp_led);
+   
     // change flag if the new battery info is different from the cached one
     if(temp_led != led){
       battery_flag = 0;
@@ -74,6 +76,21 @@ void update_demo() {
 
     // change the flag to 0
     demo_flag = 0;
+    
+    // send response back to the pohone
+    server.send(200, "text/html", "{\"result\":1}");
+  } else { server.send(200, "text/html", "{\"result\":0}"); }
+}
+
+void update_timer() {
+  if(server.hasArg("value")) {
+    
+    // get the value from the param 
+    int val = server.arg("value").toInt();
+
+    // change the flag to 0
+    timer_flag = 0;
+    time_val = val;
     
     // send response back to the pohone
     server.send(200, "text/html", "{\"result\":1}");
@@ -122,19 +139,51 @@ void demo(){
 
        
       helper(ten);
-      delay(3000);
+      delay(2000);
       
       helper(fifty); 
-      delay(3000);
+      delay(2000);
 
       helper(seventyfive);
-      delay(3000);
+      delay(2000);
 
       helper(full);
-      delay(3000);
+      delay(2000);
 
       // set back to original
       helper(led);
+}
+
+void timer(int end_time){
+    int until = end_time;
+    int i = 0;
+    float increase_f = NUM_LEDS / end_time ;
+    int increase = int(increase_f);
+    int curr = 0;
+    while(i < until){ 
+      helper(curr);
+      curr = curr + increase;
+      delay(1000);  // wait 1 sec   
+      i = i + 1; //increment
+    }
+    helper(NUM_LEDS);
+    
+    // blink two time
+    delay(500);
+    trun_off(-1);
+    ringshow_noglitch(); 
+    delay(500);
+    helper(NUM_LEDS);
+
+    delay(500);
+    trun_off(-1);
+    ringshow_noglitch(); 
+    delay(500);
+    helper(NUM_LEDS);
+
+    // reset 
+    delay(500);
+    helper(led); 
 }
 
 void setup(void){
@@ -159,7 +208,9 @@ void setup(void){
   server.on("/led", update_led); 
   server.on("/status", update_led_status);
   server.on("/demo", update_demo);
+  server.on("/timer", update_timer);
   server.begin();  // starts server
+  
 }
 
 void loop(void){
@@ -212,5 +263,11 @@ void loop(void){
    if(demo_flag == 0 && curr0 == 1){
       demo();
       demo_flag = 1;
+   }
+
+   // update when the timer request comes
+   if(timer_flag == 0 && curr0 == 1){
+      timer(time_val);
+      timer_flag = 1;
    }
 }
