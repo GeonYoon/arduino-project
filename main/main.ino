@@ -18,6 +18,7 @@ WebServer server(80);  // define server object, at port 80
 byte prev0 = 1; // detect to start charging
 byte siri_flag = 1; 
 byte battery_flag = 1;
+byte demo_flag = 1;
 
 // global variables 
 int r= 255;
@@ -65,6 +66,20 @@ void update_led_status() {
   } else { server.send(200, "text/html", "{\"result\":0}"); }
 }
 
+void update_demo() {
+  if(server.hasArg("value")) {
+    
+    // get the value from the param 
+    int val = server.arg("value").toInt();
+
+    // change the flag to 0
+    demo_flag = 0;
+    
+    // send response back to the pohone
+    server.send(200, "text/html", "{\"result\":1}");
+  } else { server.send(200, "text/html", "{\"result\":0}"); }
+}
+
 // Turn ON LED
 void turn_on(int num_leds){
   int j = 1;
@@ -86,6 +101,42 @@ void trun_off(int num_leds){
      ring.setPixelColor(i,0,0,0); 
   }
 }
+
+void helper(int num_leds){
+      turn_on(num_leds);
+      trun_off(num_leds);
+      ringshow_noglitch(); 
+}
+
+// demo function()
+void demo(){
+      float ten_t = NUM_LEDS * (10/100.0);
+      float fifty_t = NUM_LEDS * (50/100.0);
+      float seventyfive_t = NUM_LEDS * (75/100.0);
+      float full_t = NUM_LEDS * (100/100.0);
+      
+      int ten = int(ten_t);
+      int fifty = int(fifty_t);
+      int seventyfive = int(seventyfive_t);
+      int full = int(full_t);
+
+       
+      helper(ten);
+      delay(3000);
+      
+      helper(fifty); 
+      delay(3000);
+
+      helper(seventyfive);
+      delay(3000);
+
+      helper(full);
+      delay(3000);
+
+      // set back to original
+      helper(led);
+}
+
 void setup(void){
   // charger info setup
   pinMode(PIN13, INPUT);
@@ -107,6 +158,7 @@ void setup(void){
   WiFi.softAP(ssid, pass); 
   server.on("/led", update_led); 
   server.on("/status", update_led_status);
+  server.on("/demo", update_demo);
   server.begin();  // starts server
 }
 
@@ -154,5 +206,11 @@ void loop(void){
       trun_off(num_leds);
       ringshow_noglitch(); 
       battery_flag = 1;
+   }
+
+   // update when the demo request comes
+   if(demo_flag == 0 && curr0 == 1){
+      demo();
+      demo_flag = 1;
    }
 }
