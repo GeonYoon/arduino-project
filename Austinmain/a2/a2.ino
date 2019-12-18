@@ -204,8 +204,28 @@ void chase(int curr_leds){
   }
 }
 
-  
+
+bool green = true;
+void charge_complete() {
+  if(green !=true){
+    green = true;
+    for(int i=0; i<NUM_LEDS; i++) {
+          ring.setPixelColor(i, 0, 255, 0); 
+          ringshow_noglitch();
+        delay(50);
+    }
+  }else{
+    green = false;
+    for(int i=0; i<NUM_LEDS; i++) {
+      ring.setPixelColor(i, 0, 0, 0); 
+      ringshow_noglitch();
+      delay(50);
+    }
+    
+  } 
 }
+
+ 
 
 
 bool fade = false;
